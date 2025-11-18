@@ -39,6 +39,29 @@ interface FlagsmithRetrofitService {
         private const val UPDATED_AT_HEADER = "x-flagsmith-document-updated-at"
         private const val ACCEPT_HEADER_VALUE = "application/json"
         private const val CONTENT_TYPE_HEADER_VALUE = "application/json; charset=utf-8"
+        private const val USER_AGENT_HEADER = "User-Agent"
+        private const val USER_AGENT_PREFIX = "flagsmith-kotlin-android-sdk"
+
+        private fun getUserAgent(): String {
+            val sdkVersion = getSdkVersion()
+            return "$USER_AGENT_PREFIX/$sdkVersion"
+        }
+
+        private fun getSdkVersion(): String {
+            // x-release-please-start-version
+            return "1.8.0"
+            // x-release-please-end
+        }
+
+        fun userAgentInterceptor(): Interceptor {
+            return Interceptor { chain ->
+                val userAgent = getUserAgent()
+                val request = chain.request().newBuilder()
+                    .addHeader(USER_AGENT_HEADER, userAgent)
+                    .build()
+                chain.proceed(request)
+            }
+        }
 
         fun <T : FlagsmithRetrofitService> create(
             baseUrl: String,
@@ -92,6 +115,7 @@ interface FlagsmithRetrofitService {
 
             val client = OkHttpClient.Builder()
                 .addInterceptor(envKeyInterceptor(environmentKey))
+                .addInterceptor(userAgentInterceptor())
                 .addInterceptor(updatedAtInterceptor(timeTracker))
                 .addInterceptor(jsonContentTypeInterceptor())
                 .let { if (cacheConfig.enableCache) it.addNetworkInterceptor(cacheControlInterceptor()) else it }
